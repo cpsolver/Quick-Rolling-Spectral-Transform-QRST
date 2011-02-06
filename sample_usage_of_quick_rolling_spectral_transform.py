@@ -171,7 +171,7 @@ input_waveform_file = open( 'output_binary_signal_for_testing_qrst.raw' , 'rb' ,
 #----------------------------------------------------------------------
 #  Create the output file that contains compressed audio data.
 
-compressed_audio_file = open( 'output_binary_compressed_audio_qrst.qrst' , 'wb' , 0 )
+compressed_audio_file = open( 'output_binary_compressed_audio.qrst' , 'wb' , 0 )
 
 
 #----------------------------------------------------------------------
