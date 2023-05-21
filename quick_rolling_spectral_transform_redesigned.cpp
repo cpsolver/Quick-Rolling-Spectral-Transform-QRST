@@ -102,25 +102,9 @@ const int flag_yes = 1 ;
 // -----------------------------------------------
 //  Terminology:
 //
-//  The "wavelength" number starts at 1 for the
-//  wavelength that spans 4 data transitions for
-//  one "wavelength" (cycle).  It takes 5 data
-//  values to specify those 4 data transitions.
-//  Higher wavelength numbers refer to longer
-//  wavelengths, which are lower frequencies.
-//
-//  The "quadrant" number is 1 for the first
-//  quadrant of one measured cycle, and 4 for the
-//  fourth and final quadrant of the cycle.  Only
-//  the two quadrants need to be calculated
-//  because negative amplitudes indicate a
-//  positive value in the opposite quadrants.
-//  The concept of "quadrature" is used to
-//  follow the filtered waveform at one octave.
-//  This means the amplitude shifts into each
-//  adjacent quadrant in a cyclic/circular
-//  sequence, and does so at either a
-//  "clockwise" or "counterclockwise" progression.
+//  As usual, higher wavelength numbers refer to
+//  longer wavelengths, which are lower
+//  frequencies.
 //
 //  The "octave" number starts at 1 for the
 //  shortest-wavelength (highest-frequency) octave
@@ -128,13 +112,17 @@ const int flag_yes = 1 ;
 //  wavelengths (lower frequencies).
 //
 //  The calculations are done for "standard" and
-//  "tripled" octaves.  The standard octaves
-//  follow signals that are based on doubled
-//  and quadroopled sample rates.  The "tripled"
-//  octaves follow signals that are based on
-//  groups of three samples being averaged to
-//  yield the first (shortest-wavelength)
-//  octave.
+//  "tripled" octaves.
+//
+//  The standard octaves follow signals where
+//  each octave uses the average of two adjacent
+//  signal values to create a single signal value
+//  at the doubled longer wavelength.
+//
+//  The "tripled" octaves follow signals that
+//  are based on groups of three samples being
+//  averaged to yield the first
+//  (shortest-wavelength) tripled octave.
 //
 //  The combination of "standard" and "tripled"
 //  octaves yields the following progression of
@@ -142,31 +130,65 @@ const int flag_yes = 1 ;
 //
 //  1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, etc.
 //
-//  Notice that, except between 2 and 3, each
-//  number is twice the size of the number two
-//  positions earlier.
+//  Notice that, except at the beginning of this
+//  sequence, each number is twice the size of
+//  the number two positions earlier.
 //
 //  To understand this counting sequence, consider
 //  the analogy of keys on a piano.  The sequence
-//  is analogous to this right-to-left progression:
+//  is analogous to this progression where "#"
+//  indicates "sharp":
 //
 //  C6, F5#, C5, F4#, C4, F3#, C3, etc.
 //
-//  which, when reversed, is the following note
-//  progression where "#" indicates "sharp":
+//  which, when reversed to match the direction of
+//  keys on a piano, is the following note
+//  sequence:
 //
-//  C4, F4#, C5, F5#, C6, F6#, etc.
+//  C3, F3#, C4, F4#, C5, F5#, C6, etc.
+//
+//  Each "wavelength" number counts the number of
+//  signal values for one "wavelength" cycle at
+//  the current octave.  The wavelength number
+//  is specific to that octave, so they have to
+//  be doubled to compare a wavelength in one
+//  octave to a wavelength in the next
+//  "lower-frequency" octave.
+//
+//  At each octave the amplitude is measured
+//  based on 4 data transitions.  This requires
+//  5 data values to specify those 4 data
+//  transitions.
+//
+//  The "quadrant" number is 1 for the first
+//  quadrant of one measured cycle, and 2 for the
+//  second quadrant of the cycle.  The remaining
+//  third and fourth quadrants are simply
+//  negative amplitudes of the first and second
+//  quadrants.
+//
+//  The concept of "quadrature" is used to
+//  follow the filtered waveform at one octave.
+//  This means the amplitude shifts into each
+//  adjacent quadrant in a cyclic/circular
+//  sequence, and does so at either a
+//  "clockwise" or "counterclockwise" progression.
+//  A progression to increasing quadrants indicates
+//  a longer wavelength, and a progression to
+//  decreasing-numbered quadrants corresponds to
+//  a shorter wavelength.
 
 
 // -----------------------------------------------
 //  Declare global constants.
 
-const int octave_maximum = 10 ;
+const int octave_maximum = 9 ;
 const int time_count_maximum = 90 ;
 const int column_maximum = 70 ;
 const int ascii_character_space = 32 ;
 const int ascii_character_asterisk = 42 ;
 const int ascii_character_zero = 48 ;
+const int ascii_character_A = 65 ;
 const float time_scale_factor = 1.0 ;
 
 
@@ -176,6 +198,8 @@ const float time_scale_factor = 1.0 ;
 int octave ;
 int time_count ;
 int time_offset ;
+int time_offset_at_higher_octave ;
+int time_offset_minus_one_at_higher_octave ;
 int input_sample ;
 int signal_1 ;
 int signal_2 ;
@@ -188,6 +212,7 @@ int time_offset_plus_3 ;
 int time_offset_plus_4 ;
 int time_offset_plus_5 ;
 int counter_for_group_of_three ;
+int flag_yes_or_no_repeat_octave_loop ;
 int current_generated_frequency ;
 int column ;
 
@@ -227,8 +252,8 @@ void get_next_sample( )
 //  For now, while debugging, calculate a known
 //  waveform.
 
-        input_sample = 1 + 500 + ( 450 * cos( 3.14 * float( time_scale_factor * time_count * current_generated_frequency ) ) ) ;
-        current_generated_frequency ++ ;
+        input_sample = 1 + 400 + ( 400 * sin( 3.14 * float( time_scale_factor * time_count * current_generated_frequency ) ) ) ;
+        current_generated_frequency -- ;
 
 
 // -----------------------------------------------
@@ -248,71 +273,137 @@ void do_handle_next_sample( )
 
 
 // -----------------------------------------------
-//  Plot the input signal amplitude as an asterisk
-//  positioned within a line of text.
-
-    for ( column = 1 ; column <= column_maximum ; column ++ )
-    {
-        plot_character_at_column[ column ] = ascii_character_space ;
-    }
-    column = int( column_maximum * input_sample / 1000 ) ;
-    plot_character_at_column[ column ] = ascii_character_asterisk ;
-
-
-// -----------------------------------------------
-//  Identify which time offset is available for
-//  the next signal value.
-
-    time_offset_standard_at_octave[ 1 ] ++ ;
-    if ( time_offset_standard_at_octave[ 1 ] > 4 )
-    {
-        time_offset_standard_at_octave[ 1 ] = 1 ;
-    }
-    time_offset = time_offset_standard_at_octave[ 1 ] ++ ;
-//    log_out << "[offset " << time_offset << "]" << std::endl ;
-
-
-// -----------------------------------------------
-//  Put the latest sample at the top of the
-//  "standard" sequence of octave values.
-
-    filtered_signal_standard_at_octave_and_time_offset[ 1 ][ time_offset ] = input_sample ;
-
-
-// -----------------------------------------------
 //  Begin a loop that handles each octave in the
 //  standard sequence of octaves.  Usually this
 //  loop will be exited early based on which
 //  octave is being handled.
 
-    for ( octave = 2 ; octave <= octave_maximum ; octave ++ )
+    flag_yes_or_no_repeat_octave_loop = flag_yes ;
+    octave = 0 ;
+    while ( flag_yes_or_no_repeat_octave_loop == flag_yes )
     {
+        octave ++ ;
 
 
 // -----------------------------------------------
-//  If the next (longer-wavelength) octave is not
-//  yet ready to be calculated, exit the
-//  octave-indexed loop.  At each octave,
-//  readiness alternates with each cycle that
-//  reaches that octave.  When an octave is not
-//  ready, none of the next octaves can be ready.
-//  This pattern causes each successive octave to
-//  automatically follow the wavelength that is
-//  twice the length of the wavelength at the
-//  prior octave.
+//  If the current octave is not yet ready to be
+//  calculated, exit the octave-indexed loop.
+//  At each octave, readiness alternates with each
+//  cycle that reaches that octave.  When an
+//  octave is not ready, none of the next octaves
+//  can be ready.  This pattern causes each
+//  successive octave to automatically follow
+//  the wavelength that is twice the length of
+//  the wavelength at the prior octave.
 
-        column = -10 + ( octave * 10 ) + int( int( 5 * ( flag_yes_or_no_ready_standard_at_octave[ octave ] * column_maximum ) / 100 ) ) ;
-    plot_character_at_column[ column ] = ascii_character_zero + octave ;
-
-//            log_out << "[standard octave " << octave << " flag " << flag_yes_or_no_ready_standard_at_octave[ octave ] << "]" << std::endl ;
-        if ( flag_yes_or_no_ready_standard_at_octave[ octave ] != flag_yes )
+        if ( octave > 1 )
         {
-            flag_yes_or_no_ready_standard_at_octave[ octave ] = flag_yes ;
-            break ;
+            if ( flag_yes_or_no_ready_standard_at_octave[ octave ] == flag_no )
+            {
+                flag_yes_or_no_ready_standard_at_octave[ octave ] = flag_yes ;
+                flag_yes_or_no_repeat_octave_loop = flag_no ;
+                continue ;
+            } else
+            {
+                flag_yes_or_no_ready_standard_at_octave[ octave ] = flag_no ;
+            }
+        }
+
+
+// -----------------------------------------------
+//  Update the time offset for the current octave.
+//  Specifically, determine which of 5 positions
+//  is the next available position for the newest
+//  signal value at this octave.
+
+        time_offset_standard_at_octave[ octave ] ++ ;
+        time_offset = time_offset_standard_at_octave[ octave ] ;
+        if ( ( time_offset < 1 ) || ( time_offset > 5 ) )
+        {
+            time_offset_standard_at_octave[ octave ] = 1 ;
+            time_offset = 1 ;
+        }
+
+//        log_out << "  " << octave ;
+
+
+// -----------------------------------------------
+//  Update the signal at the current octave.  It
+//  is the average of the two most recent signal
+//  values at the previous (higher-frequency)
+//  octave.  However, the signal at octave 1 is
+//  obtained directly from the input signal.
+
+        if ( octave > 1 )
+        {
+            time_offset_at_higher_octave = time_offset_standard_at_octave[ octave - 1 ] ;
+            if ( time_offset_at_higher_octave > 1 )
+            {
+                time_offset_minus_one_at_higher_octave = time_offset_at_higher_octave - 1 ;
+            } else
+            {
+                time_offset_minus_one_at_higher_octave = 5 ;
+            }
+            filtered_signal_standard_at_octave_and_time_offset[ octave ][ time_offset ] = int( ( filtered_signal_standard_at_octave_and_time_offset[ octave - 1 ][ time_offset_minus_one_at_higher_octave ] + filtered_signal_standard_at_octave_and_time_offset[ octave - 1 ][ time_offset_at_higher_octave ] ) / 2 ) ;
         } else
         {
-            flag_yes_or_no_ready_standard_at_octave[ octave ] = flag_no ;
+            filtered_signal_standard_at_octave_and_time_offset[ 1 ][ time_offset ] = input_sample ;
         }
+
+
+// -----------------------------------------------
+//  Get the five most recent signal values for
+//  the current octave.
+
+        switch ( time_offset )
+        {
+            case 1 :
+                signal_1 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 1 ] ;
+                signal_2 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 2 ] ;
+                signal_3 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 3 ] ;
+                signal_4 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 4 ] ;
+                signal_5 = filtered_signal_standard_at_octave_and_time_offset[ octave - 1 ][ time_offset_at_higher_octave ] ;
+                break ;
+            case 2 :
+                signal_1 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 2 ] ;
+                signal_2 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 3 ] ;
+                signal_3 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 4 ] ;
+                signal_4 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 5 ] ;
+                signal_5 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 1 ] ;
+                break ;
+            case 3 :
+                signal_1 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 3 ] ;
+                signal_2 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 4 ] ;
+                signal_3 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 5 ] ;
+                signal_4 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 1 ] ;
+                signal_5 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 2 ] ;
+                break ;
+            case 4 :
+                signal_1 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 4 ] ;
+                signal_2 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 5 ] ;
+                signal_3 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 1 ] ;
+                signal_4 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 2 ] ;
+                signal_5 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 3 ] ;
+                break ;
+            default :
+                signal_1 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 5 ] ;
+                signal_2 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 1 ] ;
+                signal_3 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 2 ] ;
+                signal_4 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 3 ] ;
+                signal_5 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ 4 ] ;
+                break ;
+        }
+
+        // column = int( column_maximum * signal_1 / 1000 ) ;
+        // plot_character_at_column[ column ] = ascii_character_zero + 1 ;
+        // column = int( column_maximum * signal_2 / 1000 ) ;
+        // plot_character_at_column[ column ] = ascii_character_zero + 2 ;
+        // column = int( column_maximum * signal_3 / 1000 ) ;
+        // plot_character_at_column[ column ] = ascii_character_zero + 3 ;
+        // column = int( column_maximum * signal_4 / 1000 ) ;
+        // plot_character_at_column[ column ] = ascii_character_zero + 4 ;
+        // column = int( column_maximum * signal_5 / 1000 ) ;
+        // plot_character_at_column[ column ] = ascii_character_zero + 5 ;
 
 
 // -----------------------------------------------
@@ -327,16 +418,14 @@ void do_handle_next_sample( )
 //  signal_3 to signal_4, signal_3 to signal_4,
 //  signal_3 to signal_5, signal_4 to signal_5,
 //  and signal_2 to signal_5.
+//  The other pairwise comparisons are not
+//  significant.
+//
+//  Later, to increase speed, omit the
+//  multiplication here and instead do
+//  multiplication later over multiple values.
 
-        time_offset = time_offset_standard_at_octave[ octave ] ;
-
-        signal_1 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ time_offset_plus_1 ] ;
-        signal_1 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ time_offset_plus_2 ] ;
-        signal_1 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ time_offset_plus_3 ] ;
-        signal_1 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ time_offset_plus_4 ] ;
-        signal_1 = filtered_signal_standard_at_octave_and_time_offset[ octave ][ time_offset_plus_5 ] ;
-        amplitude_standard_at_octave[ octave ] = ( 3 * ( signal_1 + signal_5 ) ) - ( 4 * signal_3 ) - signal_2 - signal_4 ;
-//        log_out << "standard octave " << octave << " amplitude " << amplitude_standard_at_octave[ octave ] << std::endl ;
+        amplitude_standard_at_octave[ octave ] = int( ( ( 3 * ( signal_1 + signal_5 ) ) - ( 4 * signal_3 ) - signal_2 - signal_4 ) / 8 ) ;
 
 
 // -----------------------------------------------
@@ -344,10 +433,26 @@ void do_handle_next_sample( )
 
     }
 
+//    log_out << std::endl ;
+
 
 // -----------------------------------------------
-//  Send text characters that plot data.
+//  Plot the data as digits positioned within a
+//  line of text.  The smaller-numbered octaves
+//  (with shorter wavelengths) are written last
+//  so they overwrite the longer wavelengths.
 
+    for ( column = 1 ; column <= column_maximum ; column ++ )
+    {
+        plot_character_at_column[ column ] = ascii_character_space ;
+    }
+    for ( octave = octave_maximum ; octave >= 2 ; octave -- )
+    {
+        column = 5 + int( column_maximum * filtered_signal_standard_at_octave_and_time_offset[ octave ][ time_offset_standard_at_octave[ octave ] ] / 1000 ) ;
+        plot_character_at_column[ column ] = ascii_character_zero + octave ;
+//        log_out << "[" << octave << " " << flag_yes_or_no_ready_standard_at_octave[ octave ] << " " << time_offset_standard_at_octave[ octave ] << " " << filtered_signal_standard_at_octave_and_time_offset[ octave ][ time_offset_standard_at_octave[ octave ] ] << "]" ;
+    }
+//    log_out << std::endl ;
     for ( column = 1 ; column <= column_maximum ; column ++ )
     {
         log_out << char( plot_character_at_column[ column ] ) ;
@@ -355,15 +460,13 @@ void do_handle_next_sample( )
     log_out << std::endl ;
 
 
+return ;
+
+
 // -----------------------------------------------
 //  Add the latest sample to the top-octave value
 //  of the "triple" sequence.  At the end of three
 //  values, divide the sum by three.
-
-
-    return ;
-
-
 
     counter_for_group_of_three ++ ;
     if ( counter_for_group_of_three > 3 )
@@ -381,52 +484,16 @@ void do_handle_next_sample( )
 //  Begin a loop that handles each octave in the
 //  "triple" sequence of octaves.
 
-    for ( octave = 2 ; octave <= octave_maximum ; octave ++ )
-    {
 
 
-// -----------------------------------------------
-//  If the next (longer-wavelength) octave is not
-//  yet ready to be calculated, exit the
-//  octave-indexed loop.  At each octave,
-//  readiness alternates with each cycle that
-//  reaches that octave.  When an octave is not
-//  ready, none of the next octaves can be ready.
-//  This pattern causes each successive octave to
-//  automatically follow the wavelength that is
-//  twice the length of the wavelength at the
-//  prior octave.
+//  ....  Copy and edit the code and comments for
+//  the standard octaves.
 
-//        log_out << "[tripled octave " << octave << " flag " << flag_yes_or_no_ready_tripled_at_octave[ octave ] << "]" << std::endl ;
-        if ( flag_yes_or_no_ready_tripled_at_octave[ octave ] != flag_yes )
-        {
-            flag_yes_or_no_ready_tripled_at_octave[ octave ] = flag_yes ;
-            break ;
-        } else
-        {
-            flag_yes_or_no_ready_tripled_at_octave[ octave ] = flag_no ;
-        }
-
-
-// -----------------------------------------------
-//  Calculate the momentary amplitude of one cycle
-//  at the current wavelength.  See the comments
-//  for the standard octaves for details.
-
-        time_offset = time_offset_tripled_at_octave[ octave ] ;
-        signal_1 = filtered_signal_tripled_at_octave_and_time_offset[ octave ][ time_offset_plus_1 ] ;
-        signal_1 = filtered_signal_tripled_at_octave_and_time_offset[ octave ][ time_offset_plus_2 ] ;
-        signal_1 = filtered_signal_tripled_at_octave_and_time_offset[ octave ][ time_offset_plus_3 ] ;
-        signal_1 = filtered_signal_tripled_at_octave_and_time_offset[ octave ][ time_offset_plus_4 ] ;
-        signal_1 = filtered_signal_tripled_at_octave_and_time_offset[ octave ][ time_offset_plus_5 ] ;
-        amplitude_tripled_at_octave[ octave ] = ( 3 * ( signal_1 + signal_5 ) ) - ( 4 * signal_3 ) - signal_2 - signal_4 ;
-        log_out << "tripled octave " << octave << " amplitude " << amplitude_tripled_at_octave[ octave ] << std::endl ;
 
 
 // -----------------------------------------------
 //  Repeat the loop to handle the next octave.
 
-    }
 
 
 // -----------------------------------------------
@@ -452,11 +519,11 @@ int main( ) {
 // -----------------------------------------------
 //  Initialization.
 
-    current_generated_frequency = 100 ;
+    current_generated_frequency = 12 ;
     input_sample = 0 ;
     for ( octave = 1 ; octave <= octave_maximum ; octave ++ )
     {
-        flag_yes_or_no_ready_standard_at_octave[ octave ] = 0 ;
+        flag_yes_or_no_ready_standard_at_octave[ octave ] = flag_no ;
         for ( time_offset = 1 ; time_offset <= 5 ; time_offset ++ )
         {
             filtered_signal_standard_at_octave_and_time_offset[ octave ][ time_offset ] = 0 ;
