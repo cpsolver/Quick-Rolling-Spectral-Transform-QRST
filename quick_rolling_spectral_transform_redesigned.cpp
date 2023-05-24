@@ -324,8 +324,6 @@ void do_handle_next_sample( )
             time_offset = 1 ;
         }
 
-//        log_out << "  " << octave ;
-
 
 // -----------------------------------------------
 //  Update the signal at the current octave.  It
@@ -394,17 +392,6 @@ void do_handle_next_sample( )
                 break ;
         }
 
-        // column = int( column_maximum * signal_1 / 1000 ) ;
-        // plot_character_at_column[ column ] = ascii_character_zero + 1 ;
-        // column = int( column_maximum * signal_2 / 1000 ) ;
-        // plot_character_at_column[ column ] = ascii_character_zero + 2 ;
-        // column = int( column_maximum * signal_3 / 1000 ) ;
-        // plot_character_at_column[ column ] = ascii_character_zero + 3 ;
-        // column = int( column_maximum * signal_4 / 1000 ) ;
-        // plot_character_at_column[ column ] = ascii_character_zero + 4 ;
-        // column = int( column_maximum * signal_5 / 1000 ) ;
-        // plot_character_at_column[ column ] = ascii_character_zero + 5 ;
-
 
 // -----------------------------------------------
 //  Calculate the momentary amplitude of one cycle
@@ -428,12 +415,15 @@ void do_handle_next_sample( )
         amplitude_standard_at_octave[ octave ] = int( ( ( 3 * ( signal_1 + signal_5 ) ) - ( 4 * signal_3 ) - signal_2 - signal_4 ) / 8 ) ;
 
 
+
+        log_out << amplitude_standard_at_octave[ octave ] << "  " ;
+
+
+
 // -----------------------------------------------
 //  Repeat the loop to handle the next octave.
 
     }
-
-//    log_out << std::endl ;
 
 
 // -----------------------------------------------
@@ -442,17 +432,25 @@ void do_handle_next_sample( )
 //  (with shorter wavelengths) are written last
 //  so they overwrite the longer wavelengths.
 
+    log_out << std::endl ;
     for ( column = 1 ; column <= column_maximum ; column ++ )
     {
         plot_character_at_column[ column ] = ascii_character_space ;
     }
     for ( octave = octave_maximum ; octave >= 2 ; octave -- )
     {
-        column = 5 + int( column_maximum * filtered_signal_standard_at_octave_and_time_offset[ octave ][ time_offset_standard_at_octave[ octave ] ] / 1000 ) ;
+        column = 35 + int( amplitude_standard_at_octave[ octave ] / 30.0 ) ;
+//        column = 5 + int( column_maximum * filtered_signal_standard_at_octave_and_time_offset[ octave ][ time_offset_standard_at_octave[ octave ] ] / 1000 ) ;
+        if ( column > column_maximum )
+        {
+            column = column_maximum ;
+        }
+        if ( column < 1 )
+        {
+            column = 1 ;
+        }
         plot_character_at_column[ column ] = ascii_character_zero + octave ;
-//        log_out << "[" << octave << " " << flag_yes_or_no_ready_standard_at_octave[ octave ] << " " << time_offset_standard_at_octave[ octave ] << " " << filtered_signal_standard_at_octave_and_time_offset[ octave ][ time_offset_standard_at_octave[ octave ] ] << "]" ;
     }
-//    log_out << std::endl ;
     for ( column = 1 ; column <= column_maximum ; column ++ )
     {
         log_out << char( plot_character_at_column[ column ] ) ;
