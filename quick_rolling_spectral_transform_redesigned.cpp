@@ -89,6 +89,8 @@ int amplitude_standard_at_octave[ 20 ] ;
 int amplitude_tripled_at_octave[ 20 ] ;
 int time_offset_standard_at_octave[ 20 ] ;
 int time_offset_tripled_at_octave[ 20 ] ;
+int flag_yes_or_no_started_at_standard_octave[ 20 ] ;
+int flag_yes_or_no_started_at_tripled_octave[ 20 ] ;
 int plot_character_at_column[ 100 ] ;
 
 
@@ -311,6 +313,17 @@ void do_handle_next_sample( )
 
 
 // -----------------------------------------------
+//  Silence the output amplitude until there are
+//  enough signal values for one full cycle at
+//  this octave.
+
+        if ( time_offset_standard_at_octave[ octave ] == 4 )
+        {
+            flag_yes_or_no_started_at_standard_octave[ octave ] = flag_yes ;
+        }
+
+
+// -----------------------------------------------
 //  Update the time offset for the current octave.
 //  Specifically, determine which of 5 positions
 //  is the next available position for the newest
@@ -412,8 +425,13 @@ void do_handle_next_sample( )
 //  multiplication here and instead do
 //  multiplication later over multiple values.
 
-        amplitude_standard_at_octave[ octave ] = int( ( ( 3 * ( signal_1 + signal_5 ) ) - ( 4 * signal_3 ) - signal_2 - signal_4 ) / 8 ) ;
-
+        if ( flag_yes_or_no_started_at_standard_octave[ octave ] == flag_yes )
+        {
+            amplitude_standard_at_octave[ octave ] = int( ( ( 3 * ( signal_1 + signal_5 ) ) - ( 4 * signal_3 ) - signal_2 - signal_4 ) / 8 ) ;
+        } else
+        {
+            amplitude_standard_at_octave[ octave ] = 0 ;
+        }
 
 
         log_out << amplitude_standard_at_octave[ octave ] << "  " ;
@@ -522,6 +540,9 @@ int main( ) {
     for ( octave = 1 ; octave <= octave_maximum ; octave ++ )
     {
         flag_yes_or_no_ready_standard_at_octave[ octave ] = flag_no ;
+        flag_yes_or_no_ready_tripled_at_octave[ octave ] = flag_no ;
+        flag_yes_or_no_started_at_standard_octave[ octave ] = flag_no ;
+        flag_yes_or_no_started_at_tripled_octave[ octave ] = flag_no ;
         for ( time_offset = 1 ; time_offset <= 5 ; time_offset ++ )
         {
             filtered_signal_standard_at_octave_and_time_offset[ octave ][ time_offset ] = 0 ;
