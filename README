@@ -6,13 +6,13 @@ Copyright notices are included within the project's files.
 
 This software is still in development and does not yet yield an accurate spectral transform.  As further development occurs -- on an open-source basis -- the accuracy is expected to increase.
 
-Although this code is written in Python for debugging and prototyping purposes, this code is intended to be ported to other languages and -- if properly licensed -- hardware environments such as an IP core or Field Programmable Gate Array (FPGA).
+Although this code is written in the C/C++ language for debugging and prototyping purposes, this code is intended to be ported to other languages (including Web Assembly) and -- if properly licensed -- hardware environments such as an IP core or Field Programmable Gate Array (FPGA).
 
 ---------------------------
 
 Algorithm description:
 
-Basically the QRST spectral-transform algorithm low-pass filters and high-pass filters an audio waveform into octaves.  Within each octave, the wavelength is measured by counting peaks and the distance between peaks (and by dividing the total distance between peaks by the number of cycles), and measures the amplitude by simply summing the significant up-and-down transitions.  The results from each octave are produced twice as often as the resuls at the next-lower octave.
+Basically the QRST spectral-transform algorithm low-pass filters and high-pass filters an audio waveform into octaves.  Within each octave, the amplitude of one cycle is measured using signal values at five adjacent samples, and phases shifts are followed to determine the wavelength of the cycles at that octave.  The results from each octave are produced twice as often as the resuls at the next-lower octave.  A second interleaved sequence of octaves is also analyzed to follow a signal as it shifts frequency between adjacent octaves.
 
 ---------------------------
 
@@ -21,21 +21,4 @@ Instructions for use:
 
 To run the Quick Rolling Spectral Transform algorithm:
 
-python sample_usage_of_quick_rolling_spectral_transform.py > output_text_spectral_transform.txt
-
-
-
-To test the compression scheme and convert back to a (binary) audio waveform:
-
-python uncompress_qrst_audio.py > output_text_waveform_debug_uncompress_qrst_audio.txt
-
-
-
-To generate a different sample/test waveform, edit GenerateSignalForTesting.py and then run:
-
-python generate_signal_for_testing.py > output_text_debug_for_function_named_generate_signal_for_testing.txt
-
-
-
-To test the code on a voice sample, edit sample_usage_of_quick_rolling_spectral_transform.py to use the input file named sound_recording_votefair_ranking_unsigned_16bit_noheader.raw instead of output_binary_signal_for_testing_qrst.raw.
-
+... not yet written ...
