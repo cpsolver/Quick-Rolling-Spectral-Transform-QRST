@@ -83,15 +83,21 @@ int update_limit_for_standard_at_octave_and_time_pattern[ 20 ][ 200 ] ;
 int update_limit_for_tripled_at_octave_and_time_pattern[ 20 ][ 200 ] ;
 int filtered_signal_standard_at_octave_and_time_offset[ 20 ][ 4 ] ;
 int filtered_signal_tripled_at_octave_and_time_offset[ 20 ][ 4 ] ;
-int flag_yes_or_no_ready_standard_at_octave[ 20 ] ;
-int flag_yes_or_no_ready_tripled_at_octave[ 20 ] ;
+
 int amplitude_standard_at_octave[ 20 ] ;
 int amplitude_tripled_at_octave[ 20 ] ;
 int time_offset_standard_at_octave[ 20 ] ;
 int time_offset_tripled_at_octave[ 20 ] ;
+int quadrature_phase_standard_at_octave[ 20 ] ;
+int quadrature_phase_tripled_at_octave[ 20 ] ;
+int plot_character_at_column[ 100 ] ;
+
+int flag_yes_or_no_ready_standard_at_octave[ 20 ] ;
+int flag_yes_or_no_ready_tripled_at_octave[ 20 ] ;
 int flag_yes_or_no_started_at_standard_octave[ 20 ] ;
 int flag_yes_or_no_started_at_tripled_octave[ 20 ] ;
-int plot_character_at_column[ 100 ] ;
+int flag_forward_or_back_tie_resolution_standard_at_octave[ 20 ] ;
+int flag_forward_or_back_tie_resolution_tripled_at_octave[ 20 ] ;
 
 
 // -----------------------------------------------
@@ -99,6 +105,8 @@ int plot_character_at_column[ 100 ] ;
 
 const int flag_no = 0 ;
 const int flag_yes = 1 ;
+const int flag_forward = 1 ;
+const int flag_back = 2 ;
 
 
 // -----------------------------------------------
@@ -215,6 +223,7 @@ int time_offset_plus_4 ;
 int time_offset_plus_5 ;
 int counter_for_group_of_three ;
 int flag_yes_or_no_repeat_octave_loop ;
+int previous_quadrature_phase ;
 int current_generated_frequency ;
 int column ;
 
@@ -425,17 +434,70 @@ void do_handle_next_sample( )
 //  multiplication here and instead do
 //  multiplication later over multiple values.
 
+        previous_amplitude = amplitude_standard_at_octave[ octave ] ;
         if ( flag_yes_or_no_started_at_standard_octave[ octave ] == flag_yes )
         {
-            amplitude_standard_at_octave[ octave ] = int( ( ( 3 * ( signal_1 + signal_5 ) ) - ( 4 * signal_3 ) - signal_2 - signal_4 ) / 8 ) ;
+            current_amplitude = int( ( ( 3 * ( signal_1 + signal_5 ) ) - ( 4 * signal_3 ) - signal_2 - signal_4 ) / 8 ) ;
         } else
         {
-            amplitude_standard_at_octave[ octave ] = 0 ;
+            current_amplitude = 0 ;
         }
-
+        current_amplitude = amplitude_standard_at_octave[ octave ] ;
 
         log_out << amplitude_standard_at_octave[ octave ] << "  " ;
 
+
+// -----------------------------------------------
+//  Track the quadrature phase shift at this
+//  octave.  Specifically, keep track of which
+//  quadrant contains the just-calculated
+//  amplitude.  The change can only be to an
+//  adjacent quadrant.  The "clockwise" direction
+//  can be thought of as the sequence 1, 2, 3, 4
+//  and the "counterclockwise" direction can be
+//  thought of as 4, 3, 2, 1.
+
+//  this section of code is still being written ...
+
+        switch ( quadrature_phase_standard_at_octave[ octave ] )
+        {
+            case 1 :
+                if ( ( current_amplitude > 0 ) && ( previous_amplitude > 0 ) )
+                {
+                    quadrature_phase_standard_at_octave[ octave ] = 2 ;
+                } else
+                {
+                    quadrature_phase_standard_at_octave[ octave ] = 4 ;
+                }
+                break ;
+            case 2 :
+                if ( ( current_amplitude < 0 ) && ( previous_amplitude > 0 ) )
+                {
+                    quadrature_phase_standard_at_octave[ octave ] = 3 ;
+                } else
+                {
+                    quadrature_phase_standard_at_octave[ octave ] = 1 ;
+                }
+                break ;
+            case 3 :
+                if ( ( current_amplitude < 0 ) && ( previous_amplitude < 0 ) )
+                {
+                    quadrature_phase_standard_at_octave[ octave ] = 4 ;
+                } else
+                {
+                    quadrature_phase_standard_at_octave[ octave ] = 2 ;
+                }
+                break ;
+            case 4 :
+                if ( ( current_amplitude > 0 ) && ( previous_amplitude < 0 ) )
+                {
+                    quadrature_phase_standard_at_octave[ octave ] = 1 ;
+                } else
+                {
+                    quadrature_phase_standard_at_octave[ octave ] = 3 ;
+                }
+                break ;
+        }
 
 
 // -----------------------------------------------
