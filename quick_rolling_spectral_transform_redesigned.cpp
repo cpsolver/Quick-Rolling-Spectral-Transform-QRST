@@ -309,17 +309,23 @@ void do_handle_next_sample( )
 
 
 // -----------------------------------------------
-//  Add later:
-//
 //  Begin a loop that first handles "standard"
 //  octaves and then handles "tripled" octaves.
-
+//
 //  The standard sequence of octaves starts at
 //  array_index 1.  The tripled sequence of
 //  octaves starts at octave_tripled_first.
 
-    for ( octave_sequence_type = octave_sequence_type_standard ; octave_sequence_type <= octave_sequence_type_tripled ; octave_sequence_type ++ )
+    for ( octave_sequence_type = octave_sequence_type_standard ; octave_sequence_type <= octave_sequence_type_standard ; octave_sequence_type ++ )
+//    for ( octave_sequence_type = octave_sequence_type_standard ; octave_sequence_type <= octave_sequence_type_tripled ; octave_sequence_type ++ )
     {
+        if ( octave_sequence_type == octave_sequence_type_standard )
+        {
+            octave = 0 ;
+        } else
+        {
+            octave = octave_tripled_first - 1 ;
+        }
 
 
 // -----------------------------------------------
@@ -328,7 +334,6 @@ void do_handle_next_sample( )
 //  loop will be exited early based on which
 //  octave is being handled.
 
-        octave = 0 ;
         highest_octave_updated = 0 ;
         flag_yes_or_no_repeat_octave_loop = flag_yes ;
         while ( flag_yes_or_no_repeat_octave_loop == flag_yes )
