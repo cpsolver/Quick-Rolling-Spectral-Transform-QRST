@@ -202,6 +202,7 @@ const int ascii_character_asterisk = 42 ;
 const int ascii_character_zero = 48 ;
 const int ascii_character_A = 65 ;
 const float time_scale_factor = 1.0 ;
+const int one_cycle_of_12_bit_angle = 2 ** 12 ;
 
 
 // -----------------------------------------------
@@ -257,6 +258,71 @@ std::ofstream spectral_out ;
 
 // -----------------------------------------------
 // -----------------------------------------------
+//  Subroutine get_next_smooth_sine_wave_value
+//
+//  Get the next value for a sine wave that
+//  changes wavelength at the next peak, and
+//  changes amplitude at the next zero crossing.
+//  A person's ear is less likely to detect these
+//  transitions.
+
+void get_next_smooth_sine_wave_value( )
+{
+
+
+// -----------------------------------------------
+//  Get the current angle, and ensure it has not
+//  exceeded one cycle.
+
+    angle_as_12_bits = output_sine_wave_angle_12_bits_at_octave[ octave ] ;
+    angle_as_12_bits_validated = angle_as_12_bits % one_cycle_of_12_bit_angle ;
+    if ( angle_as_12_bits != angle_as_12_bits_validated )
+    {
+        output_sine_wave_angle_12_bits_at_octave[ octave ] = angle_as_12_bits_validated ;
+        angle_as_12_bits = angle_as_12_bits_validated ;
+    }
+
+
+// -----------------------------------------------
+//  If the wave is at a peak, allow the wavelength
+//  to change.  Otherwise continue with the
+//  previous wavelength.
+
+    if ( output_current_angle_at_octave[ octave ] != output_previous_angle_at_octave[ octave ] )
+    {
+        if ( ( ( angle_as_12_bits >= angle_at_top_peak ) && ( output_previous_angle_at_octave[ octave ] <= angle_at_top_peak ) ) || ( ( angle_as_12_bits >= angle_at_bottom_peak ) && ( output_previous_angle_at_octave[ octave ] <= angle_at_bottom_peak ) ) )
+        {
+            output_previous_angle_at_octave[ octave ] = output_current_angle_at_octave[ octave ] ;
+            angle_as_12_bits = output_sine_wave_angle_12_bits_at_octave[ octave ] ;
+        }
+    }
+
+
+// -----------------------------------------------
+//  If the wave is at a zero crossing, allow the
+//  amplitude to change.  Otherwise continue with
+//  the previous amplitude.
+
+
+// -----------------------------------------------
+//  Calculate the value.
+
+    smooth_sine_wave_value = sin( 3.14159 * 2 * float( angle_as_12_bits / one_cycle_of_12_bit_angle ) )
+
+
+// -----------------------------------------------
+
+//  todo: write this code
+
+
+// -----------------------------------------------
+//  End of subroutine get_next_smooth_sine_wave_value.
+
+}
+
+
+// -----------------------------------------------
+// -----------------------------------------------
 //  Subroutine get_next_sample
 //
 //  Get the next data sample from the input
@@ -270,7 +336,8 @@ void get_next_sample( )
 //  For now, while debugging, calculate a known
 //  waveform.
 
-        input_sample = 1 + 400 + ( 400 * sin( 3.14 * float( time_scale_factor * time_count * current_generated_frequency ) ) ) ;
+        time_offset = 123 ;
+        input_sample = 1 + 400 + ( 400 * smooth_sine_wave_value ) ;
         current_generated_frequency -- ;
 
 
@@ -352,7 +419,7 @@ void do_handle_next_sample( )
 //  the wavelength that is twice the length of
 //  the wavelength at the prior octave.
 
-            if ( octave > 1 )
+            if ( ( octave != 1 ) && ( octave != octave_tripled_first ) )
             {
                 if ( flag_yes_or_no_ready_at_octave[ octave ] == flag_no )
                 {
@@ -399,7 +466,7 @@ void do_handle_next_sample( )
 //  octave.  However, the signal at octave 1 is
 //  obtained directly from the input signal.
 
-            if ( octave > 1 )
+            if ( ( octave != 1 ) && ( octave != octave_tripled_first ) )
             {
                 time_offset_at_higher_octave = time_offset_at_octave[ octave - 1 ] ;
                 if ( time_offset_at_higher_octave > 1 )
