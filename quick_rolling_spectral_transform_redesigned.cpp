@@ -171,16 +171,20 @@
 
 int update_limit_for_at_octave_and_time_pattern[ 40 ][ 200 ] ;
 int filtered_signal_at_octave_and_time_offset[ 40 ][ 4 ] ;
-
 int amplitude_at_octave[ 40 ] ;
 int time_offset_at_octave[ 40 ] ;
 int quadrature_phase_at_octave[ 40 ] ;
 int plot_character_at_column[ 100 ] ;
 int cumulative_phase_shift_at_octave[ 40 ] ;
-
 int flag_yes_or_no_ready_at_octave[ 40 ] ;
 int flag_yes_or_no_started_at_octave[ 40 ] ;
 int flag_forward_or_back_tie_resolution_at_octave[ 40 ] ;
+int output_sine_wave_angle_12_bits_at_octave[ 40 ] ;
+int output_sine_wave_amplitude_12_bits_at_octave[ 40 ] ;
+int output_current_angle_at_octave[ 40 ] ;
+int output_previous_angle_at_octave[ 40 ] ;
+int output_current_amplitude_at_octave[ 40 ] ;
+int output_previous_amplitude_at_octave[ 40 ] ;
 
 
 // -----------------------------------------------
@@ -202,7 +206,9 @@ const int ascii_character_asterisk = 42 ;
 const int ascii_character_zero = 48 ;
 const int ascii_character_A = 65 ;
 const float time_scale_factor = 1.0 ;
-const int one_cycle_of_12_bit_angle = 2 ** 12 ;
+const int one_cycle_of_12_bit_angle = 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 ;
+const int angle_at_top_peak = 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 ;
+const int angle_at_bottom_peak = 4 * angle_at_top_peak ;
 
 
 // -----------------------------------------------
@@ -234,6 +240,10 @@ int previous_quadrature_phase ;
 int current_generated_frequency ;
 int highest_octave_updated ;
 int column ;
+int smooth_sine_wave_value ;
+int angle_as_12_bits ;
+int angle_as_12_bits_validated ;
+int amplitude_as_12_bits ;
 
 
 // -----------------------------------------------
@@ -303,6 +313,15 @@ void get_next_smooth_sine_wave_value( )
 //  amplitude to change.  Otherwise continue with
 //  the previous amplitude.
 
+    if ( output_current_angle_at_octave[ octave ] != output_previous_angle_at_octave[ octave ] )
+    {
+        if ( ( ( angle_as_12_bits >= angle_at_zero_crossing_downward ) && ( output_previous_angle_at_octave[ octave ] <= angle_at_zero_crossing_downward ) ) || ( ( angle_as_12_bits >= angle_at_zero_crossing_upward ) && ( output_previous_angle_at_octave[ octave ] <= angle_at_zero_crossing_upward ) ) )
+        {
+            output_previous_amplitude_at_octave[ octave ] = output_current_amplitude_at_octave[ octave ] ;
+            amplitude_as_12_bits = output_sine_wave_amplitude_12_bits_at_octave[ octave ] ;
+        }
+    }
+
 
 // -----------------------------------------------
 //  Calculate the value.
@@ -337,7 +356,7 @@ void get_next_sample( )
 //  waveform.
 
         time_offset = 123 ;
-        input_sample = 1 + 400 + ( 400 * smooth_sine_wave_value ) ;
+        input_sample = 1 + 400 + ( 400 * get_next_smooth_sine_wave_value( ) ) ;
         current_generated_frequency -- ;
 
 
